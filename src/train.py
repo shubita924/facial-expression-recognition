@@ -6,7 +6,7 @@ import wandb
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from dataset import FER2013Dataset
-from models import get_model
+from models import get_model, REGISTRY
 from engine import train_one_epoch, evaluate
 from torch.utils.data import DataLoader
 
@@ -14,13 +14,14 @@ def set_seed(seed=42):
     random.seed(seed); np.random.seed(seed)
     torch.manual_seed(seed); torch.cuda.manual_seed_all(seed)
 
-def build_model(name, dropout):
-    """Pass dropout only to models whose constructor accepts it."""
-    from models import REGISTRY
+def build_model(name, dropout, batchnorm):
+    """Pass only the args each model's constructor actually accepts."""
     cls = REGISTRY[name]
-    if "dropout" in inspect.signature(cls.__init__).parameters:
-        return cls(dropout=dropout)
-    return cls()
+    params = inspect.signature(cls.__init__).parameters
+    kwargs = {}
+    if "dropout" in params:   kwargs["dropout"] = dropout
+    if "batchnorm" in params: kwargs["batchnorm"] = batchnorm
+    return cls(**kwargs)
 
 def main():
     p = argparse.ArgumentParser()
@@ -29,6 +30,7 @@ def main():
     p.add_argument("--batch_size", type=int, default=64)
     p.add_argument("--epochs", type=int, default=25)
     p.add_argument("--dropout", type=float, default=0.0)
+    p.add_argument("--batchnorm", action="store_true")
     p.add_argument("--weight_decay", type=float, default=0.0)
     p.add_argument("--patience", type=int, default=0,
                    help="early stop if val_acc doesn't improve for N epochs (0 = off)")
@@ -47,12 +49,13 @@ def main():
     test_loader = DataLoader(FER2013Dataset(args.data, "test"),
                              batch_size=args.batch_size, shuffle=False, num_workers=2)
 
-    model = build_model(args.model, args.dropout).to(device)
+    model = build_model(args.model, args.dropout, args.batchnorm).to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr,
                                  weight_decay=args.weight_decay)
 
-    name = f"{args.model}_lr{args.lr}_bs{args.batch_size}_do{args.dropout}_wd{args.weight_decay}"
+    bn = "_bn" if args.batchnorm else ""
+    name = f"{args.model}_lr{args.lr}_bs{args.batch_size}_do{args.dropout}_wd{args.weight_decay}{bn}"
     run = wandb.init(project="fer2013", name=name, config=vars(args))
 
     ckpt_path = os.path.join(args.out_dir, f"{name}.pt")
