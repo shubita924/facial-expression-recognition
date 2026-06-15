@@ -6,7 +6,7 @@ import wandb
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from dataset import FER2013Dataset
-from models import get_model, REGISTRY
+from models import REGISTRY
 from engine import train_one_epoch, evaluate
 from torch.utils.data import DataLoader
 
@@ -14,13 +14,17 @@ def set_seed(seed=42):
     random.seed(seed); np.random.seed(seed)
     torch.manual_seed(seed); torch.cuda.manual_seed_all(seed)
 
-def build_model(name, dropout, batchnorm):
-    """Pass only the args each model's constructor actually accepts."""
+def build_model(name, args):
+    """Forward only the constructor args a given model actually accepts."""
     cls = REGISTRY[name]
     params = inspect.signature(cls.__init__).parameters
-    kwargs = {}
-    if "dropout" in params:   kwargs["dropout"] = dropout
-    if "batchnorm" in params: kwargs["batchnorm"] = batchnorm
+    candidates = {
+        "dropout": args.dropout,
+        "batchnorm": args.batchnorm,
+        "freeze": args.freeze,
+        "pretrained": (not args.scratch),
+    }
+    kwargs = {k: v for k, v in candidates.items() if k in params}
     return cls(**kwargs)
 
 def main():
@@ -32,6 +36,8 @@ def main():
     p.add_argument("--dropout", type=float, default=0.0)
     p.add_argument("--batchnorm", action="store_true")
     p.add_argument("--weight_decay", type=float, default=0.0)
+    p.add_argument("--freeze", action="store_true", help="freeze backbone (feature extraction)")
+    p.add_argument("--scratch", action="store_true", help="no pretrained weights (control)")
     p.add_argument("--patience", type=int, default=0,
                    help="early stop if val_acc doesn't improve for N epochs (0 = off)")
     p.add_argument("--data", default="data/fer2013.csv")
@@ -49,13 +55,15 @@ def main():
     test_loader = DataLoader(FER2013Dataset(args.data, "test"),
                              batch_size=args.batch_size, shuffle=False, num_workers=2)
 
-    model = build_model(args.model, args.dropout, args.batchnorm).to(device)
+    model = build_model(args.model, args).to(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr,
-                                 weight_decay=args.weight_decay)
+    trainable = filter(lambda p: p.requires_grad, model.parameters())
+    optimizer = torch.optim.Adam(trainable, lr=args.lr, weight_decay=args.weight_decay)
 
     bn = "_bn" if args.batchnorm else ""
-    name = f"{args.model}_lr{args.lr}_bs{args.batch_size}_do{args.dropout}_wd{args.weight_decay}{bn}"
+    fz = "_frozen" if args.freeze else ""
+    sc = "_scratch" if args.scratch else ""
+    name = f"{args.model}_lr{args.lr}_bs{args.batch_size}_do{args.dropout}_wd{args.weight_decay}{bn}{fz}{sc}"
     run = wandb.init(project="fer2013", name=name, config=vars(args))
 
     ckpt_path = os.path.join(args.out_dir, f"{name}.pt")
