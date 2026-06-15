@@ -5,7 +5,7 @@ import torch.nn as nn
 import wandb
 
 from dataset import FER2013Dataset
-from models import BaselineMLP
+from models import get_model
 from engine import train_one_epoch, evaluate
 from torch.utils.data import DataLoader
 
@@ -15,6 +15,7 @@ def set_seed(seed=42):
 
 def main():
     p = argparse.ArgumentParser()
+    p.add_argument("--model", default="baseline_mlp")
     p.add_argument("--lr", type=float, default=1e-3)
     p.add_argument("--batch_size", type=int, default=64)
     p.add_argument("--epochs", type=int, default=20)
@@ -29,11 +30,11 @@ def main():
     val_loader = DataLoader(FER2013Dataset(args.data, "val"),
                             batch_size=args.batch_size, shuffle=False, num_workers=2)
 
-    model = BaselineMLP().to(device)
+    model = get_model(args.model).to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
-    name = f"baseline_mlp_lr{args.lr}_bs{args.batch_size}"
+    name = f"{args.model}_lr{args.lr}_bs{args.batch_size}"
     run = wandb.init(project="fer2013", name=name, config=vars(args))
 
     for epoch in range(1, args.epochs + 1):
