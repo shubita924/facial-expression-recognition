@@ -1,11 +1,13 @@
 from .baseline_mlp import BaselineMLP
 from .small_cnn import SmallCNN
 from .deeper_cnn import DeeperCNN
+from .deeper_cnn_gap import DeeperCNNGAP
 
 REGISTRY = {
     "baseline_mlp": BaselineMLP,
     "small_cnn": SmallCNN,
     "deeper_cnn": DeeperCNN,
+    "deeper_cnn_gap": DeeperCNNGAP,
 }
 
 def get_model(name, **kwargs):
