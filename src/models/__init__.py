@@ -3,6 +3,7 @@ from .small_cnn import SmallCNN
 from .deeper_cnn import DeeperCNN
 from .deeper_cnn_gap import DeeperCNNGAP
 from .resnet18_fer import ResNet18FER
+from .resnet34_fer import ResNet34FER
 
 REGISTRY = {
     "baseline_mlp": BaselineMLP,
@@ -10,6 +11,7 @@ REGISTRY = {
     "deeper_cnn": DeeperCNN,
     "deeper_cnn_gap": DeeperCNNGAP,
     "resnet18": ResNet18FER,
+    "resnet34": ResNet34FER,
 }
 
 def get_model(name, **kwargs):
