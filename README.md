@@ -1,7 +1,7 @@
 # სახის ემოციების ამოცნობა (Facial Expression Recognition — FER2013)
 
 ეს რეპოზიტორია წარმოადგენს ნეირონული ქსელების იტერაციულ ექსპერიმენტებს Kaggle-ის [Challenges in Representation Learning: Facial Expression Recognition Challenge](https://www.kaggle.com/competitions/challenges-in-representation-learning-facial-expression-recognition-challenge) ამოცანაზე. ყველა ექსპერიმენტი დალოგილია **Weights & Biases**\-ზე: [wandb.ai/tshub23-free-university-of-tbilisi-/fer2013](https://wandb.ai/tshub23-free-university-of-tbilisi-/fer2013)
-
+რეპორტის ლინკი : https://api.wandb.ai/links/tshub23-free-university-of-tbilisi-/4eljc5os
 ---
 
 ## პროექტის მიმოხილვა
